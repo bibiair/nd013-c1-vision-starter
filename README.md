@@ -2,6 +2,10 @@
 
 ## Data
 
+
+
+
+
 For this project, we will be using data from the [Waymo Open dataset](https://waymo.com/open/).
 
 [OPTIONAL] - The files can be downloaded directly from the website as tar files or from the [Google Cloud Bucket](https://console.cloud.google.com/storage/browser/waymo_open_dataset_v_1_2_0_individual_files/) as individual tf records. We have already provided the data required to finish this project in the workspace, so you don't need to download it separately.
