@@ -16,11 +16,57 @@ def get_dataset(tfrecord_path, label_map='label_map.pbtxt'):
     returns:
       - dataset [tf.Dataset]: tensorflow dataset
     """
-    input_config = input_reader_pb2.InputReader()
-    input_config.label_map_path = label_map
-    input_config.tf_record_input_reader.input_path[:] = [tfrecord_path]
+    # input_config = input_reader_pb2.InputReader()
+    # input_config.label_map_path = label_map
+    # input_config.tf_record_input_reader.input_path[:] = [tfrecord_path]
     
-    dataset = build_dataset(input_config)
+    # dataset = build_dataset(input_config)
+    # return dataset
+    # Load label map file
+    
+    
+    
+    batch_size = 32
+    label_map_dict = {}
+    with open(label_map, 'r') as f:
+        for line in f:
+            if 'id:' in line:
+                label_id = int(line.split(':')[1])
+            elif 'name:' in line:
+                label_name = line.split(':')[1].strip()
+                label_map_dict[label_id] = label_name
+
+    # Define feature description for parsing tfrecord
+    feature_description = {
+        'image/encoded': tf.io.FixedLenFeature([], tf.string),
+        'image/format': tf.io.FixedLenFeature([], tf.string),
+        'image/object/bbox/xmin': tf.io.VarLenFeature(tf.float32),
+        'image/object/bbox/xmax': tf.io.VarLenFeature(tf.float32),
+        'image/object/bbox/ymin': tf.io.VarLenFeature(tf.float32),
+        'image/object/bbox/ymax': tf.io.VarLenFeature(tf.float32),
+        'image/object/class/label': tf.io.VarLenFeature(tf.int64),
+    }
+
+    # Define function to parse tfrecord
+    def parse_tfrecord(example_proto):
+        example = tf.io.parse_single_example(example_proto, feature_description)
+        image = tf.image.decode_jpeg(example['image/encoded'], channels=3)
+        image = tf.cast(image, tf.float32)
+        label_ids = tf.sparse.to_dense(example['image/object/class/label'])
+        label_names = tf.gather(label_map_dict, label_ids)
+        bbox = tf.stack([
+            tf.sparse.to_dense(example['image/object/bbox/ymin']),
+            tf.sparse.to_dense(example['image/object/bbox/xmin']),
+            tf.sparse.to_dense(example['image/object/bbox/ymax']),
+            tf.sparse.to_dense(example['image/object/bbox/xmax']),
+        ], axis=-1)
+        return image, bbox, label_names
+
+    # Create tf dataset
+    dataset = tf.data.TFRecordDataset(tfrecord_path)
+    dataset = dataset.map(parse_tfrecord)
+    dataset = dataset.batch(batch_size)
+    dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
     return dataset
 
 
