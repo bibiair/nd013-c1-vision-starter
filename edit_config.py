@@ -31,6 +31,19 @@ def edit(train_dir, eval_dir, batch_size, checkpoint, label_map):
 
     pipeline_config.eval_input_reader[0].label_map_path = label_map
     pipeline_config.eval_input_reader[0].tf_record_input_reader.input_path[:] = evaluation_files
+    
+    #aug
+    from object_detection.protos import preprocessor_pb2
+    # Construct a new PreprocessingStep object
+    my_new_data_augmentation = preprocessor_pb2.PreprocessingStep()
+    # I would like to randomly change some color images to gray with %20 probability
+    my_new_data_augmentation.random_rotation90.probability = 0.8
+    my_new_data_augmentation.random_adjust_hue.max_delta = 0.02
+    my_new_data_augmentation.random_downscale_to_target_pixels.random_coef = 0.8
+    my_new_data_augmentation.random_downscale_to_target_pixels.min_target_pixels = 2
+    my_new_data_augmentation.random_downscale_to_target_pixels.max_target_pixels = 3
+    print(my_new_data_augmentation)
+    pipeline_config.train_config.data_augmentation_options.append(my_new_data_augmentation)
 
     config_text = text_format.MessageToString(pipeline_config)             
     with tf.gfile.Open("pipeline_new.config", "wb") as f:                                                                                                                                                                                                                       

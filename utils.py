@@ -1,12 +1,55 @@
+import io
 import logging
+import cv2
+import numpy as np
 
+# import tensorflow as tf
 import tensorflow as tf
 from object_detection.inputs import train_input
 from object_detection.protos import input_reader_pb2
 from object_detection.builders.dataset_builder import build as build_dataset
 from object_detection.utils.config_util import get_configs_from_pipeline_file
+from tools.waymo_reader.simple_waymo_open_dataset_reader import WaymoDataFileReader, dataset_pb2
+from PIL import Image
+import glob
+resize_ratio = 0.5
+def getGroundTruth(frame):
+  labelMap = {
+    "TYPE_VEHICLE" : 1,
+    "TYPE_PEDESTRIAN" : 2,
+    "TYPE_CYCLELIST" : 4,
+  }
+  camera_name = dataset_pb2.CameraName.FRONT
+  labelsFrontCamera = [frame.labels for frame in frame if frame.name == camera_name][0]
+  labelsBox = [{
+    "center_x" : label.box.center_x * resize_ratio,
+    "center_y" : label.box.center_y * resize_ratio,
+    "width" : label.box.width * resize_ratio,
+    "length" : label.box.length * resize_ratio,
+    } for label in labelsFrontCamera]
+  labelsClass = [label.type for label in labelsFrontCamera]
+  return labelsBox, labelsClass
+  
+def getImage(frame):
 
+    # load the camera data structure
+    camera_name = dataset_pb2.CameraName.FRONT
+    image = [obj for obj in frame.images if obj.name == camera_name][0]
 
+    # convert the actual image into rgb format
+    img = np.array(Image.open(io.BytesIO(image.image)))
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+    # resize the image to better fit the screen
+    dim = (int(img.shape[1] * resize_ratio), int(img.shape[0] * resize_ratio))
+    resized = cv2.resize(img, dim)
+
+    # display the image 
+    # cv2.imshow("Front-camera image", resized)
+    # cv2.waitKey(0)
+    return resized
+    
+    
 def get_dataset(tfrecord_path, label_map='label_map.pbtxt'):
     """
     Opens a tf record file and create tf dataset
@@ -16,58 +59,32 @@ def get_dataset(tfrecord_path, label_map='label_map.pbtxt'):
     returns:
       - dataset [tf.Dataset]: tensorflow dataset
     """
+      
     # input_config = input_reader_pb2.InputReader()
     # input_config.label_map_path = label_map
     # input_config.tf_record_input_reader.input_path[:] = [tfrecord_path]
-    
     # dataset = build_dataset(input_config)
-    # return dataset
-    # Load label map file
+    # dataset = dataset.map(map_func)
     
     
-    
-    batch_size = 32
-    label_map_dict = {}
-    with open(label_map, 'r') as f:
-        for line in f:
-            if 'id:' in line:
-                label_id = int(line.split(':')[1])
-            elif 'name:' in line:
-                label_name = line.split(':')[1].strip()
-                label_map_dict[label_id] = label_name
+    dataset = []
+    tfrecordList = list(glob.glob("dataset/*.tfrecord"))
+    for tfrecord_path in tfrecordList:
+      dataset.append(WaymoDataFileReader(tfrecord_path))
+    # dataset.append(WaymoDataFileReader(tfrecord_path))
+    suffled_frame = []
+    for data in dataset:
+      for frame in data:
+        suffled_frame.append((frame, frame.camera_labels))
+    import random
+    random.shuffle(suffled_frame)
+    # dataset_iter = iter(dataset)
+    # for idx, frame in enumerate(dataset_iter):
+    #   display_image(frame)
 
-    # Define feature description for parsing tfrecord
-    feature_description = {
-        'image/encoded': tf.io.FixedLenFeature([], tf.string),
-        'image/format': tf.io.FixedLenFeature([], tf.string),
-        'image/object/bbox/xmin': tf.io.VarLenFeature(tf.float32),
-        'image/object/bbox/xmax': tf.io.VarLenFeature(tf.float32),
-        'image/object/bbox/ymin': tf.io.VarLenFeature(tf.float32),
-        'image/object/bbox/ymax': tf.io.VarLenFeature(tf.float32),
-        'image/object/class/label': tf.io.VarLenFeature(tf.int64),
-    }
 
-    # Define function to parse tfrecord
-    def parse_tfrecord(example_proto):
-        example = tf.io.parse_single_example(example_proto, feature_description)
-        image = tf.image.decode_jpeg(example['image/encoded'], channels=3)
-        image = tf.cast(image, tf.float32)
-        label_ids = tf.sparse.to_dense(example['image/object/class/label'])
-        label_names = tf.gather(label_map_dict, label_ids)
-        bbox = tf.stack([
-            tf.sparse.to_dense(example['image/object/bbox/ymin']),
-            tf.sparse.to_dense(example['image/object/bbox/xmin']),
-            tf.sparse.to_dense(example['image/object/bbox/ymax']),
-            tf.sparse.to_dense(example['image/object/bbox/xmax']),
-        ], axis=-1)
-        return image, bbox, label_names
 
-    # Create tf dataset
-    dataset = tf.data.TFRecordDataset(tfrecord_path)
-    dataset = dataset.map(parse_tfrecord)
-    dataset = dataset.batch(batch_size)
-    dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
-    return dataset
+    return suffled_frame
 
 
 def get_module_logger(mod_name):
