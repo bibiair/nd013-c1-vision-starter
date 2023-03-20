@@ -60,15 +60,16 @@ def get_dataset(tfrecord_path, label_map='label_map.pbtxt'):
       - dataset [tf.Dataset]: tensorflow dataset
     """
       
-    # input_config = input_reader_pb2.InputReader()
-    # input_config.label_map_path = label_map
-    # input_config.tf_record_input_reader.input_path[:] = [tfrecord_path]
-    # dataset = build_dataset(input_config)
-    # dataset = dataset.map(map_func)
+    input_config = input_reader_pb2.InputReader()
+    input_config.label_map_path = label_map
+    input_config.tf_record_input_reader.input_path[:] = [tfrecord_path]
+    
+    dataset = build_dataset(input_config)
+    return dataset
     
     
     dataset = []
-    tfrecordList = list(glob.glob("dataset/*.tfrecord"))
+    tfrecordList = list(glob.glob("data/train/*.tfrecord"))
     for tfrecord_path in tfrecordList:
       dataset.append(WaymoDataFileReader(tfrecord_path))
     # dataset.append(WaymoDataFileReader(tfrecord_path))
