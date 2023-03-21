@@ -36,13 +36,13 @@ def edit(train_dir, eval_dir, batch_size, checkpoint, label_map):
     from object_detection.protos import preprocessor_pb2
     # Construct a new PreprocessingStep object
     my_new_data_augmentation = preprocessor_pb2.PreprocessingStep()
-    my_new_data_augmentation.random_rotation90.probability = 1
+    my_new_data_augmentation.random_rotation90.probability = 0.3
     pipeline_config.train_config.data_augmentation_options.append(my_new_data_augmentation)
 
-    my_new_data_augmentation.random_adjust_hue.max_delta = 0.02
+    my_new_data_augmentation.random_adjust_hue.max_delta = 0.002
     pipeline_config.train_config.data_augmentation_options.append(my_new_data_augmentation)
 
-    my_new_data_augmentation.random_downscale_to_target_pixels.random_coef = 0.8
+    my_new_data_augmentation.random_downscale_to_target_pixels.random_coef = 0.2
     my_new_data_augmentation.random_downscale_to_target_pixels.min_target_pixels = 2
     my_new_data_augmentation.random_downscale_to_target_pixels.max_target_pixels = 3
     print(my_new_data_augmentation)
