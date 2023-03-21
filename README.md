@@ -141,20 +141,18 @@ python inference_video.py --labelmap_path label_map.pbtxt --model_path experimen
 ## Submission Template
 
 ### Project overview
-This section should contain a brief description of the project and what we are trying to achieve. Why is object detection such an important component of self driving car systems?
+In this project, I learnd about Data augmentation, Using Opencv, Numpy, Tensorflow. Object detection is main infra of perceoption so precise and fast detecting is crucial to autonomous vehicle.
 
 ### Set up
-This section should contain a brief description of the steps to follow to run the code for this repository.
+same with above explanation
 
 ### Dataset
 #### Dataset analysis
-This section should contain a quantitative and qualitative description of the dataset. It should include images, charts and other visualizations.
-#### Cross validation
-This section should detail the cross validation strategy and justify your approach.
+Distribution of classes(car, pedestrian, cyclist) are appended in writeup.pdf
 
 ### Training
 #### Reference experiment
-This section should detail the results of the reference experiment. It should includes training metrics and a detailed explanation of the algorithm's performances.
+Without any augmentation and modification on config file, The model strangely starts with small learning rate and then increase the rate
 
 #### Improve on the reference
-This section should highlight the different strategies you adopted to improve your model. It should contain relevant figures and details of your findings.
+With learning manually changes rate to anneal gradualy, had signicantly improved performance
